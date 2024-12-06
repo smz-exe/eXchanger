@@ -1,0 +1,23 @@
+{
+    "name": "exchanger",
+    "version": "1.0.0",
+    "main": "/dist/index.js",
+    "scripts": {
+        "dev": "dotenv -e .env ts-node-dev src/index.ts",
+        "build": "tsc",
+        "start": "node dist/index.js"
+    },
+    "author": "smz-exe",
+    "license": "ISC",
+    "description": "",
+    "dependencies": {
+        "discord.js": "^14.16.3",
+        "dotenv": "^16.4.7",
+        "typescript": "^5.7.2"
+    },
+    "devDependencies": {
+        "dotenv-cli": "^7.4.4",
+        "eslint": "^9.16.0",
+        "ts-node-dev": "^2.0.0"
+    }
+}
