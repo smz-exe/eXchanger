@@ -9,6 +9,7 @@ import {
     Interaction,
 } from "discord.js";
 import dotenv from "dotenv";
+import sequelize from "./database";
 import type { Command } from "./types";
 
 dotenv.config();
@@ -110,6 +111,12 @@ async function main() {
         client.on(Events.InteractionCreate, handleInteraction);
 
         await client.login(process.env.TOKEN);
+
+        await sequelize.authenticate();
+        console.log("Database connection established successfully.");
+
+        await sequelize.sync({ alter: true });
+        console.log("Models synchronized successfully.");
     } catch (error) {
         console.error(
             "[CRITICAL] An error occurred during bot initialization:",
