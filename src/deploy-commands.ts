@@ -2,6 +2,7 @@ import { REST, Routes } from "discord.js";
 import fs from "node:fs";
 import path from "node:path";
 import dotenv from "dotenv";
+import type { Command } from "./types";
 
 dotenv.config();
 
@@ -9,14 +10,19 @@ const token = process.env.DISCORD_TOKEN!;
 const clientId = process.env.CLIENT_ID!;
 const guildId = process.env.GUILD_ID!;
 
-interface Command {
-    data: { toJSON: () => object };
-    execute: Function;
-}
-
 const commands: object[] = [];
 
-function loadCommands() {
+function isValidCommand(command: any): command is Command {
+    const data = command?.data?.toJSON?.();
+    return (
+        data &&
+        typeof command.execute === "function" &&
+        typeof data.name === "string" &&
+        typeof data.description === "string"
+    );
+}
+
+async function loadCommands() {
     const foldersPath = path.join(__dirname, "commands");
     const commandFolders = fs.readdirSync(foldersPath);
 
@@ -31,11 +37,14 @@ function loadCommands() {
             try {
                 const command: Partial<Command> = require(filePath);
 
-                if (command.data && command.execute) {
+                if (isValidCommand(command)) {
                     commands.push(command.data.toJSON());
-                } else {
                     console.log(
-                        `[WARNING] The command at ${filePath} is missing a required "data" or "execute" property.`
+                        `[INFO] Loaded command: ${command.data.toJSON().name}`
+                    );
+                } else {
+                    console.warn(
+                        `[WARNING] Invalid command at ${filePath}. Missing "data" or "execute" property.`
                     );
                 }
             } catch (error) {

@@ -9,6 +9,7 @@ import {
     Interaction,
 } from "discord.js";
 import dotenv from "dotenv";
+import type { Command } from "./types";
 
 dotenv.config();
 
@@ -21,30 +22,47 @@ const client = new Client({
     ],
 });
 
-client.commands = new Collection();
+client.commands = new Collection<string, Command>();
+
+function isValidCommand(command: any): command is Command {
+    const data = command?.data?.toJSON?.();
+    return (
+        data &&
+        typeof command.execute === "function" &&
+        typeof data.name === "string" &&
+        typeof data.description === "string"
+    );
+}
 
 async function loadCommands() {
-    const foldersPath = path.join(__dirname, "commands");
-    const commandFolders = fs.readdirSync(foldersPath);
+    try {
+        const foldersPath = path.join(__dirname, "commands");
+        const commandFolders = fs.readdirSync(foldersPath);
 
-    for (const folder of commandFolders) {
-        const commandsPath = path.join(foldersPath, folder);
-        const commandFiles = fs
-            .readdirSync(commandsPath)
-            .filter((file) => file.endsWith(".js"));
+        for (const folder of commandFolders) {
+            const commandsPath = path.join(foldersPath, folder);
+            const commandFiles = fs
+                .readdirSync(commandsPath)
+                .filter((file) => file.endsWith(".ts") || file.endsWith(".js"));
 
-        for (const file of commandFiles) {
-            const filePath = path.join(commandsPath, file);
-            const command = await import(filePath);
+            for (const file of commandFiles) {
+                const filePath = path.join(commandsPath, file);
+                const command: Partial<Command> = require(filePath);
 
-            if (command.data && command.execute) {
-                client.commands.set(command.data.name, command);
-            } else {
-                console.warn(
-                    `[WARNING] The command at ${filePath} is missing a required "data" or "execute" property.`
-                );
+                if (isValidCommand(command)) {
+                    client.commands.set(command.data.toJSON().name, command);
+                    console.log(
+                        `[INFO] Loaded command: ${command.data.toJSON().name}`
+                    );
+                } else {
+                    console.warn(
+                        `[WARNING] The command at ${filePath} is missing a required "data" or "execute" property.`
+                    );
+                }
             }
         }
+    } catch (error) {
+        console.error("[ERROR] Failed to load commands:", error);
     }
 }
 
@@ -55,7 +73,7 @@ async function handleInteraction(interaction: Interaction) {
 
     if (!command) {
         console.error(
-            `No command matching ${interaction.commandName} was found.`
+            `[ERROR] No matching command for: ${interaction.commandName}`
         );
         return;
     }
@@ -64,7 +82,7 @@ async function handleInteraction(interaction: Interaction) {
         await command.execute(interaction as CommandInteraction);
     } catch (error) {
         console.error(
-            `Error executing command ${interaction.commandName}:`,
+            `[ERROR] Failed to execute command ${interaction.commandName}:`,
             error
         );
 
@@ -93,7 +111,10 @@ async function main() {
 
         await client.login(process.env.TOKEN);
     } catch (error) {
-        console.error("An error occurred during bot initialization:", error);
+        console.error(
+            "[CRITICAL] An error occurred during bot initialization:",
+            error
+        );
     }
 }
 
