@@ -1,15 +1,10 @@
 import { Model, DataTypes, Optional } from "sequelize";
 import sequelize from "../database";
 import User from "./User";
-
-interface AttendanceAttributes {
-    id: number;
-    userId: number;
-    timestamp: Date;
-}
+import type { AttendanceAttributes } from "../types";
 
 interface AttendanceCreationAttributes
-    extends Optional<AttendanceAttributes, "id"> {}
+    extends Optional<AttendanceAttributes, "id" | "timestamp"> {}
 
 class Attendance
     extends Model<AttendanceAttributes, AttendanceCreationAttributes>
@@ -42,12 +37,18 @@ Attendance.init(
         timestamp: {
             type: DataTypes.DATE,
             allowNull: false,
+            defaultValue: DataTypes.NOW,
         },
     },
     {
         sequelize,
         tableName: "attendance",
         timestamps: true,
+        indexes: [
+            {
+                fields: ["userId", "timestamp"],
+            },
+        ],
     }
 );
 

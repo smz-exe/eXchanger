@@ -11,3 +11,15 @@ export interface Command {
     data: CommandData;
     execute: (interaction: CommandInteraction) => Promise<void>;
 }
+
+export interface UserAttributes {
+    id: number;
+    discordId: string;
+    username: string;
+}
+
+export interface AttendanceAttributes {
+    id: number;
+    userId: number;
+    timestamp: Date;
+}
