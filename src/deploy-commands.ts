@@ -78,9 +78,13 @@ async function deployCommands() {
     }
 }
 
-function main() {
-    loadCommands();
-    deployCommands();
+async function main() {
+    try {
+        await loadCommands();
+        await deployCommands();
+    } catch (error) {
+        console.error("[CRITICAL] An error occurred in main:", error);
+    }
 }
 
 main();

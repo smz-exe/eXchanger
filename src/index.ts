@@ -100,28 +100,44 @@ async function handleInteraction(interaction: Interaction) {
     }
 }
 
+async function setupDatabase() {
+    try {
+        await sequelize.authenticate();
+        console.log("[INFO] Database connection established successfully.");
+
+        await sequelize.sync({ alter: true });
+        console.log("[INFO] Models synchronized successfully.");
+    } catch (error) {
+        console.error("[ERROR] Failed to setup database:", error);
+        throw error;
+    }
+}
+
 async function main() {
     try {
+        console.log("[INFO] Initializing bot...");
+
         await loadCommands();
+        console.log("[INFO] Commands loaded successfully.");
 
         client.once("ready", () => {
-            console.log(`Ready! Logged in as ${client.user?.tag}`);
+            console.log(
+                `[INFO] Bot is ready! Logged in as ${client.user?.tag}`
+            );
         });
 
         client.on(Events.InteractionCreate, handleInteraction);
 
         await client.login(process.env.TOKEN);
+        console.log("[INFO] Bot logged in successfully.");
 
         await sequelize.authenticate();
         console.log("Database connection established successfully.");
 
-        await sequelize.sync({ alter: true });
-        console.log("Models synchronized successfully.");
+        await setupDatabase();
     } catch (error) {
-        console.error(
-            "[CRITICAL] An error occurred during bot initialization:",
-            error
-        );
+        console.error("[CRITICAL] Bot initialization failed:", error);
+        process.exit(1);
     }
 }
 
