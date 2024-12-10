@@ -1,5 +1,5 @@
 import { SlashCommandBuilder, CommandInteraction } from "discord.js";
-import { differenceInDays } from "date-fns";
+import { differenceInCalendarDays, isSameDay } from "date-fns";
 import Attendance from "../../models/Attendance";
 import User from "../../models/User";
 
@@ -7,7 +7,9 @@ export const data = new SlashCommandBuilder()
     .setName("attend")
     .setDescription("Mark your attendance (before 9:00 AM).");
 
-function isBeforeOrAtSeven(hour: number, minute: number): boolean {
+function isBeforeOrAtSeven(date: Date): boolean {
+    const hour = date.getHours();
+    const minute = date.getMinutes();
     return hour < 7 || (hour === 7 && minute === 0);
 }
 
@@ -22,13 +24,17 @@ function generateAttendanceMessage(
     if (consecutiveDays > 1) {
         message += `\nThis is your ${consecutiveDays}-day streak! Keep it going!`;
 
-        if (consecutiveDays % 10 === 0) {
-            message += `\n🎉 Milestone reached: ${consecutiveDays} consecutive days! Congratulations!`;
+        if (consecutiveDays % 7 === 0) {
+            message += `\n🎉 Milestone reached: ${consecutiveDays} consecutive days! Congratulations! 🎉`;
         }
     }
 
     if (beforeSevenCount > 0) {
-        message += `\nYou have marked attendance ${beforeSevenCount} times consecutively before or at 7:00 AM. Amazing dedication!`;
+        message += `\nYou have marked attendance ${beforeSevenCount} times consecutively before or at 7:00 AM.\n Amazing dedication! 🌞`;
+
+        if (beforeSevenCount % 7 === 0) {
+            message += `\n🎉 Milestone reached: ${beforeSevenCount} consecutive days marked before or at 7:00 AM! Congratulations! 🎉`;
+        }
     }
 
     return message;
@@ -39,49 +45,34 @@ async function handleAttendance(
     now: Date,
     lastAttendance: Attendance | null
 ): Promise<{ consecutiveDays: number; beforeSevenCount: number }> {
-    const currentHour = now.getHours();
-    const currentMinute = now.getMinutes();
-
     let consecutiveDays = 1;
-    let beforeSevenCount = 0;
+    let beforeSevenCount = isBeforeOrAtSeven(now) ? 1 : 0;
 
     if (lastAttendance) {
         const lastDate = new Date(lastAttendance.timestamp);
-        const diffInDays = differenceInDays(now, lastDate);
 
-        if (diffInDays === 1) {
+        if (differenceInCalendarDays(now, lastDate) === 1) {
             consecutiveDays = lastAttendance.consecutiveDays + 1;
-
-            const lastHour = lastDate.getHours();
-            const lastMinute = lastDate.getMinutes();
-
-            if (
-                isBeforeOrAtSeven(lastHour, lastMinute) &&
-                isBeforeOrAtSeven(currentHour, currentMinute)
-            ) {
+            if (isBeforeOrAtSeven(lastDate) && isBeforeOrAtSeven(now)) {
                 beforeSevenCount = lastAttendance.beforeSevenCount + 1;
-            } else if (isBeforeOrAtSeven(currentHour, currentMinute)) {
-                beforeSevenCount = 1;
             } else {
-                beforeSevenCount = 0;
+                beforeSevenCount = isBeforeOrAtSeven(now) ? 1 : 0;
             }
-        } else if (diffInDays > 1) {
-            consecutiveDays = 1;
-            beforeSevenCount = 0;
         }
     }
 
     return { consecutiveDays, beforeSevenCount };
 }
 
-export async function execute(interaction: CommandInteraction): Promise<void> {
+export async function execute(
+    interaction: CommandInteraction,
+    now: Date = new Date()
+): Promise<void> {
     const discordId = interaction.user.id;
     const displayName =
         interaction.user?.displayName || interaction.user.username;
 
     try {
-        const now = new Date();
-
         if (now.getHours() >= 9) {
             await interaction.reply({
                 content:
@@ -106,6 +97,18 @@ export async function execute(interaction: CommandInteraction): Promise<void> {
             order: [["timestamp", "DESC"]],
         });
 
+        if (
+            lastAttendance &&
+            isSameDay(new Date(lastAttendance.timestamp), now)
+        ) {
+            await interaction.reply({
+                content:
+                    "You have already marked your attendance for today. See you tomorrow!",
+                ephemeral: true,
+            });
+            return;
+        }
+
         const { consecutiveDays, beforeSevenCount } = await handleAttendance(
             user.id,
             now,
@@ -129,6 +132,8 @@ export async function execute(interaction: CommandInteraction): Promise<void> {
     } catch (error) {
         console.error("[ERROR] Failed to mark attendance:", {
             discordId,
+            username: interaction.user.username,
+            timestamp: new Date(),
             error,
         });
         await interaction.reply({
