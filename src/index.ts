@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import {
+    ActivityType,
     Client,
     Collection,
     CommandInteraction,
@@ -114,13 +115,21 @@ async function setupDatabase() {
 }
 
 async function main() {
-    try {
-        console.log("[INFO] Initializing bot...");
+    console.log("[INFO] Initializing bot...");
 
+    try {
         await loadCommands();
         console.log("[INFO] Commands loaded successfully.");
 
-        client.once("ready", () => {
+        client.once("ready", async () => {
+            if (client.user) {
+                client.user.setActivity("default", {
+                    type: ActivityType.Custom,
+                    state: "Just Do It ☑️",
+                });
+            } else {
+                console.error("[ERROR] Client user is null.");
+            }
             console.log(
                 `[INFO] Bot is ready! Logged in as ${client.user?.tag}`
             );
@@ -130,9 +139,6 @@ async function main() {
 
         await client.login(process.env.TOKEN);
         console.log("[INFO] Bot logged in successfully.");
-
-        await sequelize.authenticate();
-        console.log("Database connection established successfully.");
 
         await setupDatabase();
     } catch (error) {
