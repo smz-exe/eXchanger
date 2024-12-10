@@ -103,7 +103,7 @@ export async function execute(interaction: CommandInteraction): Promise<void> {
         message += `📌 **Latest Attendance:** ${latestTimestamp.toLocaleString()}\n`;
         message += `🔥 **Current Streak:** ${currentStreak} day(s)\n`;
         message += `🏆 **Highest Streak:** ${maxStreak} day(s)\n`;
-        message += `⏰ **Highest Streak Before 7:00 AM:** ${maxBeforeSevenStreak} day(s)\n`;
+        message += `⏰ **Highest Streak Before 7:00:** ${maxBeforeSevenStreak} day(s)\n`;
         message += `📊 **Total Records:** ${totalRecords}\n`;
 
         const aiAnalysis = await generateAnalysis(
