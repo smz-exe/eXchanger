@@ -6,7 +6,7 @@ import type { AttendanceAttributes } from "../types";
 interface AttendanceCreationAttributes
     extends Optional<
         AttendanceAttributes,
-        "id" | "timestamp" | "consecutiveDays"
+        "id" | "timestamp" | "consecutiveDays" | "beforeSevenCount"
     > {}
 
 class Attendance
@@ -17,6 +17,7 @@ class Attendance
     public userId!: number;
     public timestamp!: Date;
     public consecutiveDays!: number;
+    public beforeSevenCount!: number;
 
     public readonly createdAt!: Date;
     public readonly updatedAt!: Date;
@@ -47,6 +48,11 @@ Attendance.init(
             type: DataTypes.INTEGER,
             allowNull: false,
             defaultValue: 1,
+        },
+        beforeSevenCount: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            defaultValue: 0,
         },
     },
     {

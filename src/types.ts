@@ -23,4 +23,5 @@ export interface AttendanceAttributes {
     userId: number;
     timestamp: Date;
     consecutiveDays: number;
+    beforeSevenCount: number;
 }
