@@ -17,6 +17,7 @@ if (!db_name || !username || !password) {
 const sequelize = new Sequelize(db_name, username, password, {
     host,
     dialect: "postgres",
+    logging: false,
 });
 
 export default sequelize;
