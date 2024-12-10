@@ -4,7 +4,10 @@ import User from "./User";
 import type { AttendanceAttributes } from "../types";
 
 interface AttendanceCreationAttributes
-    extends Optional<AttendanceAttributes, "id" | "timestamp"> {}
+    extends Optional<
+        AttendanceAttributes,
+        "id" | "timestamp" | "consecutiveDays"
+    > {}
 
 class Attendance
     extends Model<AttendanceAttributes, AttendanceCreationAttributes>
@@ -13,6 +16,7 @@ class Attendance
     public id!: number;
     public userId!: number;
     public timestamp!: Date;
+    public consecutiveDays!: number;
 
     public readonly createdAt!: Date;
     public readonly updatedAt!: Date;
@@ -38,6 +42,11 @@ Attendance.init(
             type: DataTypes.DATE,
             allowNull: false,
             defaultValue: DataTypes.NOW,
+        },
+        consecutiveDays: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            defaultValue: 1,
         },
     },
     {
