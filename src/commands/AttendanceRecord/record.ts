@@ -1,4 +1,8 @@
-import { SlashCommandBuilder, CommandInteraction } from "discord.js";
+import {
+    SlashCommandBuilder,
+    CommandInteraction,
+    EmbedBuilder,
+} from "discord.js";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import dotenv from "dotenv";
 import Attendance from "../../models/Attendance";
@@ -14,7 +18,6 @@ if (!GEMINI_API_KEY) {
 }
 
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-const DISCORD_MAX_MESSAGE_LENGTH = 2000;
 
 export const data = new SlashCommandBuilder()
     .setName("record")
@@ -31,7 +34,11 @@ async function generateAnalysis(
     latestAttendance: Date
 ): Promise<string> {
     const prompt = `
-    Analyze the attendance data for a user named "${username}".
+    I want you to act as a motivational coach.
+    I will provide you with some information about someone's goals and challenges, and it will be your job to come up with strategies that can help this person achieve their goals.
+    This could involve providing positive affirmations, giving helpful advice or suggesting activities they can do to reach their end goal.
+
+    Here is the attendance data for a user named "${username}".
     The user has the following data:
     - Total attendance records: ${totalRecords}
     - Current streak: ${currentStreak} days
@@ -65,10 +72,15 @@ export async function execute(interaction: CommandInteraction): Promise<void> {
         const user = await User.findOne({ where: { discordId } });
 
         if (!user) {
-            await interaction.reply({
-                content: `❌ You are not registered. Please use **/register** to sign up first.`,
-                ephemeral: true,
-            });
+            const embed = new EmbedBuilder()
+                .setColor(0xff0000)
+                .setTitle("Not Registered ❌")
+                .setDescription(
+                    "You are not registered.\n Please use **/register** to sign up first."
+                )
+                .setTimestamp();
+
+            await interaction.reply({ embeds: [embed], ephemeral: true });
             return;
         }
 
@@ -78,10 +90,15 @@ export async function execute(interaction: CommandInteraction): Promise<void> {
         });
 
         if (attendanceRecords.length === 0) {
-            await interaction.reply({
-                content: `📅 You have no attendance records yet. Use **/attend** to mark your first attendance!`,
-                ephemeral: true,
-            });
+            const embed = new EmbedBuilder()
+                .setColor(0xffcc00)
+                .setTitle("No Attendance Records 📅")
+                .setDescription(
+                    "You have no attendance records yet. Use **/attend** to mark your first attendance!"
+                )
+                .setTimestamp();
+
+            await interaction.reply({ embeds: [embed], ephemeral: true });
             return;
         }
 
@@ -99,13 +116,6 @@ export async function execute(interaction: CommandInteraction): Promise<void> {
 
         const totalRecords = attendanceRecords.length;
 
-        let message = `🎉 **Hello, ${displayName}! Here's your attendance summary:** 🎉\n\n`;
-        message += `📌 **Latest Attendance:** ${latestTimestamp.toLocaleString()}\n`;
-        message += `🔥 **Current Streak:** ${currentStreak} day(s)\n`;
-        message += `🏆 **Highest Streak:** ${maxStreak} day(s)\n`;
-        message += `⏰ **Highest Streak Before 7:00:** ${maxBeforeSevenStreak} day(s)\n`;
-        message += `📊 **Total Records:** ${totalRecords}\n`;
-
         const aiAnalysis = await generateAnalysis(
             displayName,
             totalRecords,
@@ -115,28 +125,59 @@ export async function execute(interaction: CommandInteraction): Promise<void> {
             latestTimestamp
         );
 
-        message += `\n💡 **Analysis:**\n ${aiAnalysis}`;
+        const embed = new EmbedBuilder()
+            .setColor(0x00ff00)
+            .setTitle(`Attendance Summary for ${displayName} 🎉`)
+            .addFields(
+                {
+                    name: "📌 Latest Attendance",
+                    value: latestTimestamp.toLocaleString(),
+                    inline: false,
+                },
+                {
+                    name: "🔥 Current Streak",
+                    value: `${currentStreak} day(s)`,
+                    inline: true,
+                },
+                {
+                    name: "🏆 Highest Streak",
+                    value: `${maxStreak} day(s)`,
+                    inline: true,
+                },
+                {
+                    name: "⏰ Streak Before 7:00",
+                    value: `${maxBeforeSevenStreak} day(s)`,
+                    inline: true,
+                },
+                {
+                    name: "📊 Total Records",
+                    value: `${totalRecords}`,
+                    inline: true,
+                },
+                {
+                    name: "💡 AI Analysis",
+                    value: aiAnalysis,
+                    inline: false,
+                }
+            )
+            .setFooter({ text: "Gemini 1.5 Flash" })
+            .setTimestamp();
 
-        if (message.length > DISCORD_MAX_MESSAGE_LENGTH) {
-            console.warn(
-                "[WARNING] Message exceeds Discord's limit. Trimming..."
-            );
-            message = `${message.slice(
-                0,
-                DISCORD_MAX_MESSAGE_LENGTH - 100
-            )}\n\n✂️ [Message truncated due to length.]`;
-        }
-
-        await interaction.reply(message);
+        await interaction.reply({ embeds: [embed] });
     } catch (error) {
         console.error("[ERROR] Failed to retrieve attendance records:", {
             discordId,
             error,
         });
-        await interaction.reply({
-            content:
-                "⚠️ An error occurred while retrieving your attendance records. Please try again later.",
-            ephemeral: true,
-        });
+
+        const embed = new EmbedBuilder()
+            .setColor(0xff0000)
+            .setTitle("Error ⚠️")
+            .setDescription(
+                "An error occurred while retrieving your attendance records. Please try again later."
+            )
+            .setTimestamp();
+
+        await interaction.reply({ embeds: [embed], ephemeral: true });
     }
 }
