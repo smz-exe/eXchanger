@@ -1,11 +1,15 @@
-import { SlashCommandBuilder, CommandInteraction } from "discord.js";
+import {
+    SlashCommandBuilder,
+    CommandInteraction,
+    EmbedBuilder,
+} from "discord.js";
 import { differenceInCalendarDays, isSameDay } from "date-fns";
 import Attendance from "../../models/Attendance";
 import User from "../../models/User";
 
 export const data = new SlashCommandBuilder()
     .setName("attend")
-    .setDescription("Mark your attendance (before 9:00 AM).");
+    .setDescription("➡️ Mark your attendance (between 5:00 AM and 9:00 AM).");
 
 function isBeforeOrAtSeven(date: Date): boolean {
     const hour = date.getHours();
@@ -13,31 +17,9 @@ function isBeforeOrAtSeven(date: Date): boolean {
     return hour < 7 || (hour === 7 && minute === 0);
 }
 
-function generateAttendanceMessage(
-    displayName: string,
-    timestamp: Date,
-    consecutiveDays: number,
-    beforeSevenCount: number
-): string {
-    let message = `Hello, ${displayName}! Your attendance has been recorded at ${timestamp.toLocaleTimeString()}.`;
-
-    if (consecutiveDays > 1) {
-        message += `\nThis is your ${consecutiveDays}-day streak! Keep it going!`;
-
-        if (consecutiveDays % 7 === 0) {
-            message += `\n🎉 Milestone reached: ${consecutiveDays} consecutive days! Congratulations! 🎉`;
-        }
-    }
-
-    if (beforeSevenCount > 0) {
-        message += `\nYou have marked attendance ${beforeSevenCount} times consecutively before or at 7:00 AM.\n Amazing dedication! 🌞`;
-
-        if (beforeSevenCount % 7 === 0) {
-            message += `\n🎉 Milestone reached: ${beforeSevenCount} consecutive days marked before or at 7:00 AM! Congratulations! 🎉`;
-        }
-    }
-
-    return message;
+function isWithinAttendancePeriod(date: Date): boolean {
+    const hour = date.getHours();
+    return hour >= 5 && hour < 9;
 }
 
 async function handleAttendance(
@@ -73,22 +55,31 @@ export async function execute(
         interaction.user?.displayName || interaction.user.username;
 
     try {
-        if (now.getHours() >= 9) {
-            await interaction.reply({
-                content:
-                    "Attendance can only be marked before 9:00 AM. Please try again tomorrow.",
-                ephemeral: true,
-            });
+        if (!isWithinAttendancePeriod(now)) {
+            const embed = new EmbedBuilder()
+                .setColor(0xffcc00)
+                .setTitle("Attendance Closed ⏰")
+                .setDescription(
+                    "Attendance can only be marked between 5:00 AM and 9:00 AM.\n Please try again during this time period."
+                )
+                .setTimestamp();
+
+            await interaction.reply({ embeds: [embed], ephemeral: true });
             return;
         }
 
         const user = await User.findOne({ where: { discordId } });
 
         if (!user) {
-            await interaction.reply({
-                content: `You are not registered. Please use /register to sign up first.`,
-                ephemeral: true,
-            });
+            const embed = new EmbedBuilder()
+                .setColor(0xff0000)
+                .setTitle("Not Registered ❌")
+                .setDescription(
+                    "You are not registered.\n Please use `/register` to sign up first."
+                )
+                .setTimestamp();
+
+            await interaction.reply({ embeds: [embed], ephemeral: true });
             return;
         }
 
@@ -101,11 +92,15 @@ export async function execute(
             lastAttendance &&
             isSameDay(new Date(lastAttendance.timestamp), now)
         ) {
-            await interaction.reply({
-                content:
-                    "You have already marked your attendance for today. See you tomorrow!",
-                ephemeral: true,
-            });
+            const embed = new EmbedBuilder()
+                .setColor(0x0099ff)
+                .setTitle("Already Checked In")
+                .setDescription(
+                    "You have already marked your attendance for today.\n See you tomorrow!"
+                )
+                .setTimestamp();
+
+            await interaction.reply({ embeds: [embed], ephemeral: true });
             return;
         }
 
@@ -122,13 +117,34 @@ export async function execute(
             beforeSevenCount,
         });
 
-        const message = generateAttendanceMessage(
-            displayName,
-            now,
-            consecutiveDays,
-            beforeSevenCount
-        );
-        await interaction.reply(message);
+        const embed = new EmbedBuilder()
+            .setColor(0x00ff00)
+            .setTitle("Attendance Recorded ✅")
+            .setDescription(
+                `Hello, **${displayName}**! Your attendance has been recorded at **${now.toLocaleTimeString()}**.`
+            )
+            .addFields(
+                {
+                    name: "Current Streak 🎯",
+                    value: `${consecutiveDays} day(s)`,
+                    inline: true,
+                },
+                {
+                    name: "Before 7:00 AM 🌞",
+                    value: `${beforeSevenCount} day(s)`,
+                    inline: true,
+                }
+            )
+            .setTimestamp();
+
+        if (consecutiveDays % 7 === 0 || beforeSevenCount % 7 === 0) {
+            embed.addFields({
+                name: "Milestone 🎉",
+                value: `Amazing! You've reached a milestone with your attendance streak!`,
+            });
+        }
+
+        await interaction.reply({ embeds: [embed] });
     } catch (error) {
         console.error("[ERROR] Failed to mark attendance:", {
             discordId,
@@ -136,10 +152,15 @@ export async function execute(
             timestamp: new Date(),
             error,
         });
-        await interaction.reply({
-            content:
-                "An error occurred while marking your attendance. Please try again later.",
-            ephemeral: true,
-        });
+
+        const embed = new EmbedBuilder()
+            .setColor(0xff0000)
+            .setTitle("Attendance Failed ❌")
+            .setDescription(
+                "An error occurred while marking your attendance. Please try again later."
+            )
+            .setTimestamp();
+
+        await interaction.reply({ embeds: [embed], ephemeral: true });
     }
 }
