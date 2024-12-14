@@ -89,39 +89,7 @@ async function loadEvents() {
             console.warn(`[WARNING] Invalid event file: ${file}`);
         }
     }
-}
-
-async function handleInteraction(interaction: Interaction) {
-    if (!interaction.isChatInputCommand()) return;
-
-    const command = client.commands.get(interaction.commandName);
-
-    if (!command) {
-        console.error(
-            `[ERROR] No matching command for: ${interaction.commandName}`
-        );
-        return;
-    }
-
-    try {
-        await command.execute(interaction as CommandInteraction);
-    } catch (error) {
-        console.error(
-            `[ERROR] Failed to execute command ${interaction.commandName}:`,
-            error
-        );
-
-        const replyOptions = {
-            content: "There was an error while executing this command!",
-            ephemeral: true,
-        };
-
-        if (interaction.replied || interaction.deferred) {
-            await interaction.followUp(replyOptions);
-        } else {
-            await interaction.reply(replyOptions);
-        }
-    }
+    console.log("[INFO] Events loaded successfully.");
 }
 
 async function setupDatabase() {
@@ -142,10 +110,7 @@ async function main() {
 
     try {
         await loadCommands();
-
         await loadEvents();
-        console.log("[INFO] Events loaded successfully.");
-
         await setupDatabase();
 
         await client.login(process.env.TOKEN);
