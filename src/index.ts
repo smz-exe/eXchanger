@@ -70,6 +70,27 @@ async function loadCommands() {
     }
 }
 
+async function loadEvents() {
+    const eventsPath = path.join(__dirname, "events");
+    const eventFiles = fs
+        .readdirSync(eventsPath)
+        .filter((file) => file.endsWith(".ts") || file.endsWith(".js"));
+
+    for (const file of eventFiles) {
+        const { name, once, execute } = require(path.join(eventsPath, file));
+        if (name && execute) {
+            if (once) {
+                client.once(name, (...args) => execute(...args, client));
+            } else {
+                client.on(name, (...args) => execute(...args, client));
+            }
+            console.log(`[INFO] Loaded event: ${name}`);
+        } else {
+            console.warn(`[WARNING] Invalid event file: ${file}`);
+        }
+    }
+}
+
 async function handleInteraction(interaction: Interaction) {
     if (!interaction.isChatInputCommand()) return;
 
@@ -122,21 +143,8 @@ async function main() {
     try {
         await loadCommands();
 
-        client.once("ready", async () => {
-            if (client.user) {
-                client.user.setActivity("default", {
-                    type: ActivityType.Custom,
-                    state: "Just Do It ☑️",
-                });
-            } else {
-                console.error("[ERROR] Client user is null.");
-            }
-            console.log(
-                `[INFO] Bot is ready! Logged in as ${client.user?.tag}`
-            );
-        });
-
-        client.on(Events.InteractionCreate, handleInteraction);
+        await loadEvents();
+        console.log("[INFO] Events loaded successfully.");
 
         await setupDatabase();
 
