@@ -37,6 +37,7 @@ function isValidCommand(command: any): command is Command {
 }
 
 async function loadCommands() {
+    console.log("[INFO] Loading commands...");
     try {
         const foldersPath = path.join(__dirname, "commands");
         const commandFolders = fs.readdirSync(foldersPath);
@@ -63,6 +64,7 @@ async function loadCommands() {
                 }
             }
         }
+        console.log("[INFO] Commands loaded successfully.");
     } catch (error) {
         console.error("[ERROR] Failed to load commands:", error);
     }
@@ -119,7 +121,6 @@ async function main() {
 
     try {
         await loadCommands();
-        console.log("[INFO] Commands loaded successfully.");
 
         client.once("ready", async () => {
             if (client.user) {
@@ -137,10 +138,10 @@ async function main() {
 
         client.on(Events.InteractionCreate, handleInteraction);
 
+        await setupDatabase();
+
         await client.login(process.env.TOKEN);
         console.log("[INFO] Bot logged in successfully.");
-
-        await setupDatabase();
     } catch (error) {
         console.error("[CRITICAL] Bot initialization failed:", error);
         process.exit(1);
