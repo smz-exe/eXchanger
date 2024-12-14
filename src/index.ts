@@ -1,14 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import {
-    ActivityType,
-    Client,
-    Collection,
-    CommandInteraction,
-    Events,
-    GatewayIntentBits,
-    Interaction,
-} from "discord.js";
+import { Client, Collection, GatewayIntentBits } from "discord.js";
 import dotenv from "dotenv";
 import sequelize from "./database";
 import type { Command } from "./types";
