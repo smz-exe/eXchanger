@@ -3,6 +3,7 @@ import path from "node:path";
 import { Client, Collection, GatewayIntentBits } from "discord.js";
 import dotenv from "dotenv";
 import sequelize from "./database";
+import User from "./models/User";
 import type { Command } from "./types/commands.types";
 
 dotenv.config();
@@ -26,6 +27,33 @@ function isValidCommand(command: any): command is Command {
         typeof data.name === "string" &&
         typeof data.description === "string"
     );
+}
+
+async function registerBotInDatabase() {
+    const botId = process.env.CLIENT_ID;
+    const botUsername = "eXchanger";
+
+    if (!botId) {
+        console.error(
+            "[ERROR] CLIENT_ID is not defined in environment variables."
+        );
+        return;
+    }
+
+    try {
+        const [botUser, created] = await User.findOrCreate({
+            where: { discordId: botId },
+            defaults: { discordId: botId, username: botUsername },
+        });
+
+        if (created) {
+            console.log(`[INFO] Bot user registered as ${botUsername}.`);
+        } else {
+            console.log(`[INFO] Bot user already exists in the database.`);
+        }
+    } catch (error) {
+        console.error("[ERROR] Failed to register bot in the database:", error);
+    }
 }
 
 async function loadCommands() {
@@ -63,25 +91,43 @@ async function loadCommands() {
 }
 
 async function loadEvents() {
-    const eventsPath = path.join(__dirname, "events");
-    const eventFiles = fs
-        .readdirSync(eventsPath)
-        .filter((file) => file.endsWith(".ts") || file.endsWith(".js"));
+    console.log("[INFO] Loading events...");
+    try {
+        const eventsPath = path.join(__dirname, "events");
+        const eventFiles = fs
+            .readdirSync(eventsPath)
+            .filter((file) => file.endsWith(".ts") || file.endsWith(".js"));
 
-    for (const file of eventFiles) {
-        const { name, once, execute } = require(path.join(eventsPath, file));
-        if (name && execute) {
-            if (once) {
-                client.once(name, (...args) => execute(...args, client));
-            } else {
-                client.on(name, (...args) => execute(...args, client));
+        for (const file of eventFiles) {
+            try {
+                const { name, once, execute } = require(path.join(
+                    eventsPath,
+                    file
+                ));
+
+                if (name && execute) {
+                    if (once) {
+                        client.once(name, (...args) =>
+                            execute(...args, client)
+                        );
+                    } else {
+                        client.on(name, (...args) => execute(...args, client));
+                    }
+                    console.log(`[INFO] Loaded event: ${name}`);
+                } else {
+                    console.warn(`[WARNING] Invalid event file: ${file}`);
+                }
+            } catch (error) {
+                console.error(
+                    `[ERROR] Failed to load event from file ${file}:`,
+                    error
+                );
             }
-            console.log(`[INFO] Loaded event: ${name}`);
-        } else {
-            console.warn(`[WARNING] Invalid event file: ${file}`);
         }
+        console.log("[INFO] Events loaded successfully.");
+    } catch (error) {
+        console.error("[ERROR] Failed to load events:", error);
     }
-    console.log("[INFO] Events loaded successfully.");
 }
 
 async function setupDatabase() {
@@ -91,6 +137,8 @@ async function setupDatabase() {
 
         await sequelize.sync({ alter: true });
         console.log("[INFO] Models synchronized successfully.");
+
+        await registerBotInDatabase();
     } catch (error) {
         console.error("[ERROR] Failed to setup database:", error);
         throw error;
