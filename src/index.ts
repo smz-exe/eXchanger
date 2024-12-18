@@ -1,17 +1,10 @@
 import fs from "node:fs";
 import path from "node:path";
-import {
-    ActivityType,
-    Client,
-    Collection,
-    CommandInteraction,
-    Events,
-    GatewayIntentBits,
-    Interaction,
-} from "discord.js";
+import { Client, Collection, GatewayIntentBits } from "discord.js";
 import dotenv from "dotenv";
 import sequelize from "./database";
-import type { Command } from "./types";
+import User from "./models/User";
+import type { Command } from "./types/commands.types";
 
 dotenv.config();
 
@@ -36,7 +29,35 @@ function isValidCommand(command: any): command is Command {
     );
 }
 
+async function registerBotInDatabase() {
+    const botId = process.env.CLIENT_ID;
+    const botUsername = "eXchanger";
+
+    if (!botId) {
+        console.error(
+            "[ERROR] CLIENT_ID is not defined in environment variables."
+        );
+        return;
+    }
+
+    try {
+        const [botUser, created] = await User.findOrCreate({
+            where: { discordId: botId },
+            defaults: { discordId: botId, username: botUsername },
+        });
+
+        if (created) {
+            console.log(`[INFO] Bot user registered as ${botUsername}.`);
+        } else {
+            console.log(`[INFO] Bot user already exists in the database.`);
+        }
+    } catch (error) {
+        console.error("[ERROR] Failed to register bot in the database:", error);
+    }
+}
+
 async function loadCommands() {
+    console.log("[INFO] Loading commands...");
     try {
         const foldersPath = path.join(__dirname, "commands");
         const commandFolders = fs.readdirSync(foldersPath);
@@ -63,41 +84,49 @@ async function loadCommands() {
                 }
             }
         }
+        console.log("[INFO] Commands loaded successfully.");
     } catch (error) {
         console.error("[ERROR] Failed to load commands:", error);
     }
 }
 
-async function handleInteraction(interaction: Interaction) {
-    if (!interaction.isChatInputCommand()) return;
-
-    const command = client.commands.get(interaction.commandName);
-
-    if (!command) {
-        console.error(
-            `[ERROR] No matching command for: ${interaction.commandName}`
-        );
-        return;
-    }
-
+async function loadEvents() {
+    console.log("[INFO] Loading events...");
     try {
-        await command.execute(interaction as CommandInteraction);
-    } catch (error) {
-        console.error(
-            `[ERROR] Failed to execute command ${interaction.commandName}:`,
-            error
-        );
+        const eventsPath = path.join(__dirname, "events");
+        const eventFiles = fs
+            .readdirSync(eventsPath)
+            .filter((file) => file.endsWith(".ts") || file.endsWith(".js"));
 
-        const replyOptions = {
-            content: "There was an error while executing this command!",
-            ephemeral: true,
-        };
+        for (const file of eventFiles) {
+            try {
+                const { name, once, execute } = require(path.join(
+                    eventsPath,
+                    file
+                ));
 
-        if (interaction.replied || interaction.deferred) {
-            await interaction.followUp(replyOptions);
-        } else {
-            await interaction.reply(replyOptions);
+                if (name && execute) {
+                    if (once) {
+                        client.once(name, (...args) =>
+                            execute(...args, client)
+                        );
+                    } else {
+                        client.on(name, (...args) => execute(...args, client));
+                    }
+                    console.log(`[INFO] Loaded event: ${name}`);
+                } else {
+                    console.warn(`[WARNING] Invalid event file: ${file}`);
+                }
+            } catch (error) {
+                console.error(
+                    `[ERROR] Failed to load event from file ${file}:`,
+                    error
+                );
+            }
         }
+        console.log("[INFO] Events loaded successfully.");
+    } catch (error) {
+        console.error("[ERROR] Failed to load events:", error);
     }
 }
 
@@ -108,6 +137,8 @@ async function setupDatabase() {
 
         await sequelize.sync({ alter: true });
         console.log("[INFO] Models synchronized successfully.");
+
+        await registerBotInDatabase();
     } catch (error) {
         console.error("[ERROR] Failed to setup database:", error);
         throw error;
@@ -119,28 +150,11 @@ async function main() {
 
     try {
         await loadCommands();
-        console.log("[INFO] Commands loaded successfully.");
-
-        client.once("ready", async () => {
-            if (client.user) {
-                client.user.setActivity("default", {
-                    type: ActivityType.Custom,
-                    state: "Just Do It ☑️",
-                });
-            } else {
-                console.error("[ERROR] Client user is null.");
-            }
-            console.log(
-                `[INFO] Bot is ready! Logged in as ${client.user?.tag}`
-            );
-        });
-
-        client.on(Events.InteractionCreate, handleInteraction);
+        await loadEvents();
+        await setupDatabase();
 
         await client.login(process.env.TOKEN);
         console.log("[INFO] Bot logged in successfully.");
-
-        await setupDatabase();
     } catch (error) {
         console.error("[CRITICAL] Bot initialization failed:", error);
         process.exit(1);

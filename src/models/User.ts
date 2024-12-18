@@ -1,6 +1,6 @@
 import { Model, DataTypes, Optional } from "sequelize";
 import sequelize from "../database";
-import type { UserAttributes } from "../types";
+import type { UserAttributes } from "./types/user.types";
 
 interface UserCreationAttributes extends Optional<UserAttributes, "id"> {}
 
