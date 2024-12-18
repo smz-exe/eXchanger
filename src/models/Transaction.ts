@@ -12,6 +12,8 @@ class Transaction
 {
     public id!: number;
     public userId!: number;
+    public senderId!: number;
+    public recipientId!: number;
     public type!: "earn" | "spend";
     public amount!: number;
     public reason!: string | null;
@@ -34,7 +36,22 @@ Transaction.init(
                 model: User,
                 key: "id",
             },
-            onDelete: "CASCADE",
+        },
+        senderId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            references: {
+                model: User,
+                key: "id",
+            },
+        },
+        recipientId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            references: {
+                model: User,
+                key: "id",
+            },
         },
         type: {
             type: DataTypes.ENUM("earn", "spend"),
@@ -45,7 +62,7 @@ Transaction.init(
             allowNull: false,
         },
         reason: {
-            type: DataTypes.TEXT,
+            type: DataTypes.STRING,
             allowNull: true,
         },
     },

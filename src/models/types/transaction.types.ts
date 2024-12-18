@@ -1,7 +1,9 @@
 export interface TransactionAttributes {
     id: number;
     userId: number;
-    type: "earn" | "spend";
+    senderId?: number;
+    recipientId?: number;
+    type: "earn" | "spend" | "transfer";
     amount: number;
     reason: string | null;
     createdAt?: Date;
