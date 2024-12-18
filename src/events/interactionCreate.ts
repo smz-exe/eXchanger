@@ -6,7 +6,7 @@ import {
     StringSelectMenuInteraction,
     UserSelectMenuInteraction,
 } from "discord.js";
-import type { Command } from "../types";
+import type { Command } from "../types/commands.types";
 
 export const name = "interactionCreate";
 export const once = false;

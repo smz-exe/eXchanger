@@ -2,7 +2,7 @@ import { REST, Routes } from "discord.js";
 import fs from "node:fs";
 import path from "node:path";
 import dotenv from "dotenv";
-import type { Command } from "./types";
+import type { Command } from "./types/commands.types";
 
 dotenv.config();
 

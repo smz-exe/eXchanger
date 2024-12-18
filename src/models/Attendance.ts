@@ -1,13 +1,10 @@
-import { Model, DataTypes, Optional } from "sequelize";
+import { Model, DataTypes } from "sequelize";
 import sequelize from "../database";
 import User from "./User";
-import type { AttendanceAttributes } from "../types";
-
-interface AttendanceCreationAttributes
-    extends Optional<
-        AttendanceAttributes,
-        "id" | "timestamp" | "consecutiveDays" | "beforeSevenCount"
-    > {}
+import type {
+    AttendanceAttributes,
+    AttendanceCreationAttributes,
+} from "./types/attendance.types";
 
 class Attendance
     extends Model<AttendanceAttributes, AttendanceCreationAttributes>

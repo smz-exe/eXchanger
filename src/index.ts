@@ -3,7 +3,7 @@ import path from "node:path";
 import { Client, Collection, GatewayIntentBits } from "discord.js";
 import dotenv from "dotenv";
 import sequelize from "./database";
-import type { Command } from "./types";
+import type { Command } from "./types/commands.types";
 
 dotenv.config();
 
