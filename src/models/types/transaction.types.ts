@@ -1,14 +1,18 @@
+export type TransactionType = "earn" | "spend" | "transfer";
+
 export interface TransactionAttributes {
     id: number;
     userId: number;
-    senderId?: number;
-    recipientId?: number;
-    type: "earn" | "spend" | "transfer";
+    senderId: number | null;
+    recipientId: number | null;
+    type: TransactionType;
     amount: number;
     reason: string | null;
     createdAt?: Date;
     updatedAt?: Date;
 }
 
-export interface TransactionCreationAttributes
-    extends Omit<TransactionAttributes, "id"> {}
+export type TransactionCreationAttributes = Omit<
+    TransactionAttributes,
+    "id" | "createdAt" | "updatedAt"
+>;

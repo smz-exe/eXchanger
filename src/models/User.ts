@@ -1,8 +1,8 @@
 import { Model, DataTypes, Optional } from "sequelize";
-import sequelize from "../database";
+import sequelize from "../db/sequelize";
 import type { UserAttributes } from "./types/user.types";
 
-interface UserCreationAttributes extends Optional<UserAttributes, "id"> {}
+type UserCreationAttributes = Optional<UserAttributes, "id">;
 
 class User
     extends Model<UserAttributes, UserCreationAttributes>

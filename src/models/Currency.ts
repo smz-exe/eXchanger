@@ -1,5 +1,5 @@
 import { Model, DataTypes } from "sequelize";
-import sequelize from "../database";
+import sequelize from "../db/sequelize";
 import User from "./User";
 import type {
     CurrencyAttributes,
@@ -28,6 +28,7 @@ Currency.init(
         userId: {
             type: DataTypes.INTEGER,
             allowNull: false,
+            unique: true,
             references: {
                 model: User,
                 key: "id",
@@ -46,8 +47,5 @@ Currency.init(
         timestamps: true,
     }
 );
-
-User.hasOne(Currency, { foreignKey: "userId", as: "currency" });
-Currency.belongsTo(User, { foreignKey: "userId", as: "user" });
 
 export default Currency;

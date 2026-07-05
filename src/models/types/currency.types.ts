@@ -6,5 +6,7 @@ export interface CurrencyAttributes {
     updatedAt?: Date;
 }
 
-export interface CurrencyCreationAttributes
-    extends Omit<CurrencyAttributes, "id"> {}
+export type CurrencyCreationAttributes = Omit<
+    CurrencyAttributes,
+    "id" | "createdAt" | "updatedAt"
+>;

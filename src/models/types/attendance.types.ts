@@ -8,12 +8,11 @@ export interface AttendanceAttributes {
     updatedAt?: Date;
 }
 
-export interface AttendanceCreationAttributes
-    extends Partial<
-        Pick<
-            AttendanceAttributes,
-            "id" | "timestamp" | "consecutiveDays" | "beforeSevenCount"
-        >
-    > {
+export interface AttendanceCreationAttributes extends Partial<
+    Pick<
+        AttendanceAttributes,
+        "id" | "timestamp" | "consecutiveDays" | "beforeSevenCount"
+    >
+> {
     userId: number;
 }

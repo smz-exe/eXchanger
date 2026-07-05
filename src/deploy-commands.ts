@@ -1,90 +1,37 @@
-import { REST, Routes } from "discord.js";
-import fs from "node:fs";
 import path from "node:path";
-import dotenv from "dotenv";
-import type { Command } from "./types/commands.types";
+import { REST, Routes } from "discord.js";
+import { env } from "./config/env";
+import { logger } from "./lib/logger";
+import { loadCommands } from "./lib/commandLoader";
 
-dotenv.config();
+async function deployCommands(): Promise<void> {
+    const commands = loadCommands(path.join(__dirname, "commands")).map(
+        (command) => command.data.toJSON()
+    );
 
-const token = process.env.DISCORD_TOKEN!;
-const clientId = process.env.CLIENT_ID!;
-const guildId = process.env.GUILD_ID!;
+    const rest = new REST({ version: "10" }).setToken(env.DISCORD_TOKEN);
 
-const commands: object[] = [];
+    logger.info(
+        `Started refreshing ${commands.length} application (/) commands.`
+    );
 
-function isValidCommand(command: any): command is Command {
-    const data = command?.data?.toJSON?.();
-    return (
-        data &&
-        typeof command.execute === "function" &&
-        typeof data.name === "string" &&
-        typeof data.description === "string"
+    const data = (await rest.put(
+        Routes.applicationGuildCommands(env.CLIENT_ID, env.GUILD_ID),
+        { body: commands }
+    )) as unknown[];
+
+    logger.info(
+        `Successfully reloaded ${data.length} application (/) commands.`
     );
 }
 
-async function loadCommands() {
-    const foldersPath = path.join(__dirname, "commands");
-    const commandFolders = fs.readdirSync(foldersPath);
-
-    for (const folder of commandFolders) {
-        const commandsPath = path.join(foldersPath, folder);
-        const commandFiles = fs
-            .readdirSync(commandsPath)
-            .filter((file) => file.endsWith(".ts") || file.endsWith(".js"));
-
-        for (const file of commandFiles) {
-            const filePath = path.join(commandsPath, file);
-            try {
-                const command: Partial<Command> = require(filePath);
-
-                if (isValidCommand(command)) {
-                    commands.push(command.data.toJSON());
-                    console.log(
-                        `[INFO] Loaded command: ${command.data.toJSON().name}`
-                    );
-                } else {
-                    console.warn(
-                        `[WARNING] Invalid command at ${filePath}. Missing "data" or "execute" property.`
-                    );
-                }
-            } catch (error) {
-                console.error(
-                    `[ERROR] Failed to load command at ${filePath}:`,
-                    error
-                );
-            }
-        }
-    }
-}
-
-async function deployCommands() {
-    const rest = new REST({ version: "10" }).setToken(token);
-
+async function main(): Promise<void> {
     try {
-        console.log(
-            `Started refreshing ${commands.length} application (/) commands.`
-        );
-
-        const data = (await rest.put(
-            Routes.applicationGuildCommands(clientId, guildId),
-            { body: commands }
-        )) as any[];
-
-        console.log(
-            `Successfully reloaded ${data.length} application (/) commands.`
-        );
-    } catch (error) {
-        console.error(`[ERROR] Failed to deploy commands:`, error);
-    }
-}
-
-async function main() {
-    try {
-        await loadCommands();
         await deployCommands();
     } catch (error) {
-        console.error("[CRITICAL] An error occurred in main:", error);
+        logger.error("Failed to deploy commands", error);
+        process.exit(1);
     }
 }
 
-main();
+void main();
