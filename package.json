@@ -1,32 +1,52 @@
 {
     "name": "exchanger",
     "version": "1.0.0",
-    "main": "/dist/index.js",
+    "main": "dist/index.js",
+    "type": "commonjs",
     "scripts": {
-        "dev": "dotenv -e .env -- ts-node-dev --files src/index.ts",
-        "build": "tsc",
+        "dev": "tsx watch src/index.ts",
+        "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
+        "build": "npm run clean && tsc",
         "start": "node dist/index.js",
-        "compile": "tsc -p ."
+        "deploy-commands": "tsx src/deploy-commands.ts",
+        "lint": "eslint .",
+        "lint:fix": "eslint . --fix",
+        "typecheck": "tsc --noEmit",
+        "test": "vitest run",
+        "test:watch": "vitest",
+        "test:coverage": "vitest run --coverage"
     },
     "author": "smz-exe",
     "license": "ISC",
-    "description": "",
+    "description": "Discord bot for attendance tracking and virtual currency (Jam).",
     "dependencies": {
-        "@google/generative-ai": "^0.21.0",
-        "date-fns": "^4.1.0",
-        "discord.js": "^14.16.3",
-        "dotenv": "^16.4.7",
-        "pg": "^8.13.1",
+        "@google/genai": "^2.10.0",
+        "date-fns": "^4.4.0",
+        "discord.js": "^14.26.4",
+        "dotenv": "^17.4.2",
+        "pg": "^8.22.0",
         "pg-hstore": "^2.3.4",
-        "sequelize": "^6.37.5",
-        "typescript": "^5.7.2"
+        "sequelize": "^6.37.8",
+        "zod": "^4.4.3"
     },
     "devDependencies": {
-        "@types/node": "^22.10.1",
-        "@types/pg": "^8.11.10",
-        "@types/sequelize": "^4.28.20",
-        "dotenv-cli": "^7.4.4",
-        "eslint": "^9.16.0",
-        "ts-node-dev": "^2.0.0"
+        "@eslint/js": "^10.0.1",
+        "@types/node": "^24.13.2",
+        "@types/pg": "^8.20.0",
+        "@vitest/coverage-v8": "^4.1.9",
+        "eslint": "^10.6.0",
+        "tsx": "^4.23.0",
+        "typescript": "^6.0.3",
+        "typescript-eslint": "^8.62.1",
+        "vitest": "^4.1.9"
+    },
+    "overrides": {
+        "undici": "^6.27.0",
+        "ws": "^8.21.0",
+        "validator": "^13.15.35",
+        "lodash": "^4.18.1",
+        "dottie": "^2.0.7",
+        "uuid": "^11.1.1",
+        "underscore": "^1.13.8"
     }
 }
