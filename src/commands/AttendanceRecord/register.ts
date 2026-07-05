@@ -1,28 +1,29 @@
 import {
     SlashCommandBuilder,
-    CommandInteraction,
+    ChatInputCommandInteraction,
     EmbedBuilder,
 } from "discord.js";
-import User from "../../models/User";
+import { userService } from "../../container";
+import { errorEmbed } from "../../lib/embeds";
+import { logger } from "../../lib/logger";
+import { COLORS } from "../../lib/constants";
 
 export const data = new SlashCommandBuilder()
     .setName("register")
     .setDescription("✅ Sign up to participate in the attendance system.");
 
-export async function execute(interaction: CommandInteraction) {
+export async function execute(
+    interaction: ChatInputCommandInteraction
+): Promise<void> {
     const discordId = interaction.user.id;
     const username = interaction.user.username;
-    const displayName =
-        interaction.user?.displayName || interaction.user.username;
+    const displayName = interaction.user.displayName ?? username;
 
     try {
-        const [user, created] = await User.findOrCreate({
-            where: { discordId },
-            defaults: { discordId, username },
-        });
+        const { created } = await userService.register(discordId, username);
 
         const embed = new EmbedBuilder()
-            .setColor(created ? 0x00ff00 : 0x0099ff)
+            .setColor(created ? COLORS.SUCCESS : COLORS.INFO)
             .setTitle(
                 created ? "Registration Successful 🎉" : "Already Registered"
             )
@@ -41,20 +42,15 @@ export async function execute(interaction: CommandInteraction) {
 
         await interaction.reply({ embeds: [embed] });
     } catch (error) {
-        console.error("[ERROR] Failed to register user:", {
-            discordId,
-            username,
-            error,
+        logger.error("Failed to register user", { discordId, username, error });
+        await interaction.reply({
+            embeds: [
+                errorEmbed(
+                    "An error occurred while registering. Please try again later.",
+                    "Registration Failed ❌"
+                ),
+            ],
+            ephemeral: true,
         });
-
-        const errorEmbed = new EmbedBuilder()
-            .setColor(0xff0000)
-            .setTitle("Registration Failed ❌")
-            .setDescription(
-                "An error occurred while registering. Please try again later."
-            )
-            .setTimestamp();
-
-        await interaction.reply({ embeds: [errorEmbed], ephemeral: true });
     }
 }

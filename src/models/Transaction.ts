@@ -1,10 +1,13 @@
 import { Model, DataTypes } from "sequelize";
-import sequelize from "../database";
+import sequelize from "../db/sequelize";
 import User from "./User";
 import type {
     TransactionAttributes,
     TransactionCreationAttributes,
+    TransactionType,
 } from "./types/transaction.types";
+
+const TRANSACTION_TYPES: TransactionType[] = ["earn", "spend", "transfer"];
 
 class Transaction
     extends Model<TransactionAttributes, TransactionCreationAttributes>
@@ -12,9 +15,9 @@ class Transaction
 {
     public id!: number;
     public userId!: number;
-    public senderId!: number;
-    public recipientId!: number;
-    public type!: "earn" | "spend";
+    public senderId!: number | null;
+    public recipientId!: number | null;
+    public type!: TransactionType;
     public amount!: number;
     public reason!: string | null;
 
@@ -54,12 +57,15 @@ Transaction.init(
             },
         },
         type: {
-            type: DataTypes.ENUM("earn", "spend"),
+            type: DataTypes.ENUM(...TRANSACTION_TYPES),
             allowNull: false,
         },
         amount: {
             type: DataTypes.INTEGER,
             allowNull: false,
+            validate: {
+                min: 1,
+            },
         },
         reason: {
             type: DataTypes.STRING,
@@ -70,10 +76,12 @@ Transaction.init(
         sequelize,
         tableName: "transactions",
         timestamps: true,
+        indexes: [
+            { fields: ["userId"] },
+            { fields: ["senderId"] },
+            { fields: ["recipientId"] },
+        ],
     }
 );
-
-User.hasMany(Transaction, { foreignKey: "userId", as: "transactions" });
-Transaction.belongsTo(User, { foreignKey: "userId", as: "user" });
 
 export default Transaction;

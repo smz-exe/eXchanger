@@ -1,5 +1,5 @@
 import { Model, DataTypes } from "sequelize";
-import sequelize from "../database";
+import sequelize from "../db/sequelize";
 import User from "./User";
 import type {
     AttendanceAttributes,
@@ -63,8 +63,5 @@ Attendance.init(
         ],
     }
 );
-
-User.hasMany(Attendance, { foreignKey: "userId", as: "attendances" });
-Attendance.belongsTo(User, { foreignKey: "userId", as: "user" });
 
 export default Attendance;
